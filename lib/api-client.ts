@@ -9,6 +9,13 @@ export interface ProcessingResponse {
     doc_processing_save_response_in_database_time: number;
     total_time: number;
   };
+  content?: {
+    summary: string;
+    questions: Array<{
+      question: string;
+      response: string;
+    }>;
+  };
 }
 
 export interface AnswerResponse {

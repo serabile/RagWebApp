@@ -10,7 +10,13 @@ type Message = {
   source?: string;
 };
 
+type QuestionAnswer = {
+  question: string;
+  response: string;
+};
+
 const STORAGE_KEY = 'rag-chat-history';
+const QA_STORAGE_KEY = 'rag-qa-pairs';
 
 export const saveMessages = (messages: Message[]): void => {
   try {
@@ -52,5 +58,39 @@ export const clearMessages = (): void => {
     }
   } catch (error) {
     console.error('Failed to clear messages from localStorage:', error);
+  }
+};
+
+export const saveQuestionAnswers = (questionAnswers: QuestionAnswer[]): void => {
+  try {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(QA_STORAGE_KEY, JSON.stringify(questionAnswers));
+    }
+  } catch (error) {
+    console.error('Failed to save question/answers to localStorage:', error);
+  }
+};
+
+export const loadQuestionAnswers = (): QuestionAnswer[] => {
+  try {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(QA_STORAGE_KEY);
+      if (!stored) return [];
+      
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error('Failed to load question/answers from localStorage:', error);
+  }
+  return [];
+};
+
+export const clearQuestionAnswers = (): void => {
+  try {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(QA_STORAGE_KEY);
+    }
+  } catch (error) {
+    console.error('Failed to clear question/answers from localStorage:', error);
   }
 };
