@@ -9,6 +9,12 @@ type Message = {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  metrics?: {
+    similarity_database_search_sec: number;
+    llm_response_sec: number;
+    total_time_sec: number;
+  };
+  source?: string;
 };
 
 export default function Chat() {
@@ -66,6 +72,8 @@ export default function Chat() {
         role: 'assistant' as const,
         content: data.answer || "Sorry, I couldn't process your request.",
         timestamp: new Date(),
+        metrics: data.metrics,
+        source: data.source
       };
       
       setMessages((prev) => [...prev, assistantMessage]);
@@ -81,6 +89,17 @@ export default function Chat() {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Fonction utilitaire pour formater le temps
+  const formatTime = (seconds: number): string => {
+    if (seconds < 0.001) {
+      return `${(seconds * 1000).toFixed(2)}ms`;
+    } else if (seconds < 1) {
+      return `${(seconds * 1000).toFixed(0)}ms`;
+    } else {
+      return `${seconds.toFixed(2)}s`;
     }
   };
 
@@ -133,12 +152,37 @@ export default function Chat() {
                     }`}
                   >
                     <p className="whitespace-pre-wrap">{message.content}</p>
+                    
                     <div
-                      className={`text-xs mt-1 ${
+                      className={`flex items-center text-xs mt-1 ${
                         message.role === 'user' ? 'text-blue-200' : 'text-gray-500'
                       }`}
                     >
-                      {new Date(message.timestamp).toLocaleTimeString()}
+                      <span>{new Date(message.timestamp).toLocaleTimeString()}</span>
+                      
+                      {message.role === 'assistant' && message.metrics && (
+                        <div className="flex items-center ml-2">
+                          <span className="inline-block w-1 h-1 rounded-full bg-gray-400 mx-1"></span>
+                          <div className="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span title={`Recherche: ${formatTime(message.metrics.similarity_database_search_sec)}, LLM: ${formatTime(message.metrics.llm_response_sec)}`}>
+                              {formatTime(message.metrics.total_time_sec)}
+                            </span>
+                          </div>
+                          
+                          {message.source && (
+                            <div className="ml-2 flex items-center" title="Source">
+                              <span className="inline-block w-1 h-1 rounded-full bg-gray-400 mx-1"></span>
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                              </svg>
+                              <span>{message.source}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

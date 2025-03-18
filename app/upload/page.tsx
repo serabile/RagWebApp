@@ -6,43 +6,35 @@ import Link from 'next/link';
 import { processDocument } from '@/lib/api-client';
 
 export default function Upload() {
-  const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [fileUrl, setFileUrl] = useState<string>('');
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      setError(null);
-    }
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFileUrl(e.target.value);
+    setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) {
-      setError('Please select a file');
+    if (!fileUrl.trim()) {
+      setError('Please enter a PDF URL');
       return;
     }
 
-    setUploading(true);
+    // Validate if it looks like a PDF URL
+    if (!fileUrl.toLowerCase().endsWith('.pdf')) {
+      setError('URL must point to a PDF file');
+      return;
+    }
+
     setError(null);
+    setProcessing(true);
 
     try {
-      // For demo purposes, we'll simulate uploading to a server
-      // In a real app, you would upload the file to your server
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Simulate the file being available at the URL
-      const fileUrl = `http://192.168.1.26/${file.name}`;
-      
-      // Process the file with the RAG service
-      setUploading(false);
-      setProcessing(true);
-      
-      // Use the processDocument function from api-client.ts
+      // Process the file with the RAG service using the direct URL
       const result = await processDocument(fileUrl);
       
       if (result.processing_time && result.processing_time.doc_processing_response_info === 'Succeed') {
@@ -67,27 +59,32 @@ export default function Upload() {
       <div className="w-full max-w-md space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
-            Upload a Document
+            Process a Document
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Select a PDF file to process with our RAG system
+            Enter the URL of a PDF file to process with our RAG system
           </p>
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm">
             <div className="mb-4">
-              <label htmlFor="file-upload" className="block text-sm font-medium text-gray-700">
-                Document File (PDF)
+              <label htmlFor="pdf-url" className="block text-sm font-medium text-gray-700">
+                PDF Document URL
               </label>
               <input
-                id="file-upload"
-                name="file"
-                type="file"
-                accept=".pdf"
-                onChange={handleFileChange}
-                className="mt-2 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none p-2"
+                id="pdf-url"
+                name="pdfUrl"
+                type="url"
+                placeholder="http://example.com/document.pdf"
+                value={fileUrl}
+                onChange={handleUrlChange}
+                className="mt-2 block w-full text-sm text-gray-900 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2"
+                required
               />
+              <p className="mt-1 text-xs text-gray-500">
+                Enter the full URL to a PDF document (must end with .pdf)
+              </p>
             </div>
           </div>
 
@@ -113,14 +110,14 @@ export default function Upload() {
             
             <button
               type="submit"
-              disabled={uploading || processing || success}
+              disabled={processing || success}
               className={`group relative flex w-auto justify-center rounded-md border border-transparent py-2 px-4 text-sm font-medium text-white ${
-                uploading || processing || success 
+                processing || success 
                   ? 'bg-gray-400 cursor-not-allowed' 
                   : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
               }`}
             >
-              {uploading ? 'Uploading...' : processing ? 'Processing...' : 'Upload & Process'}
+              {processing ? 'Processing...' : 'Process Document'}
             </button>
           </div>
         </form>

@@ -1,6 +1,6 @@
-// Instead of using absolute URLs with the RAG service IP,
-// use relative URLs to our Next.js API routes
+import { Settings } from '@/types/settings';
 
+// Types for responses
 export interface ProcessingResponse {
   processing_time: {
     doc_processing_load_time: number;
@@ -21,8 +21,32 @@ export interface AnswerResponse {
   };
 }
 
+// Helper function to get API endpoint from settings or use default
+function getApiEndpoint(): string {
+  if (typeof window === 'undefined') {
+    return '/api'; // Default for server-side
+  }
+  
+  // Try to get from localStorage
+  try {
+    const savedSettings = localStorage.getItem('rag-app-settings');
+    if (savedSettings) {
+      const settings = JSON.parse(savedSettings);
+      if (settings.apiEndpoint) {
+        return '/api'; // Always use API routes
+      }
+    }
+  } catch (error) {
+    console.error('Failed to parse saved settings', error);
+  }
+  
+  return '/api'; // Default fallback
+}
+
 export async function processDocument(fileUrl: string): Promise<ProcessingResponse> {
-  const response = await fetch(`/api/processing`, {
+  const apiBase = getApiEndpoint();
+  
+  const response = await fetch(`${apiBase}/processing`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -40,7 +64,9 @@ export async function processDocument(fileUrl: string): Promise<ProcessingRespon
 }
 
 export async function getAnswer(query: string, prompt: string): Promise<AnswerResponse> {
-  const response = await fetch(`/api/answer`, {
+  const apiBase = getApiEndpoint();
+  
+  const response = await fetch(`${apiBase}/answer`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

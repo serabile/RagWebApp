@@ -2,6 +2,12 @@ type Message = {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  metrics?: {
+    similarity_database_search_sec: number;
+    llm_response_sec: number;
+    total_time_sec: number;
+  };
+  source?: string;
 };
 
 const STORAGE_KEY = 'rag-chat-history';

@@ -26,6 +26,12 @@ export default function Home() {
             Chat with Documents
           </Link>
         </div>
+        
+        <div className="mt-4 text-center">
+          <Link href="/settings" className="text-sm text-blue-600 hover:text-blue-500">
+            Settings
+          </Link>
+        </div>
       </div>
     </div>
   );
