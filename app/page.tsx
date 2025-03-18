@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import Image from 'next/image';
 
 export default function Home() {
   return (
@@ -16,14 +15,32 @@ export default function Home() {
           <div className="w-24 h-24 mb-5 relative">
             <div className="absolute inset-0 bg-primary-100 rounded-full animate-pulse-slow"></div>
             <div className="relative w-full h-full flex items-center justify-center">
-              <Image
-                src="/logo.svg" 
-                alt="RAG Assistant Logo"
-                width={80}
-                height={80}
+              {/* Replace Image component with inline SVG */}
+              <svg 
+                viewBox="0 0 80 80" 
+                width="80" 
+                height="80" 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg"
                 className="animate-float"
-                priority
-              />
+              >
+                {/* Document stack background */}
+                <rect x="12" y="8" width="40" height="48" rx="4" fill="#E0E7FF" />
+                <rect x="16" y="12" width="32" height="4" rx="2" fill="#6366F1" />
+                <rect x="16" y="20" width="28" height="4" rx="2" fill="#A5B4FC" />
+                <rect x="16" y="28" width="32" height="4" rx="2" fill="#A5B4FC" />
+                <rect x="16" y="36" width="20" height="4" rx="2" fill="#A5B4FC" />
+                
+                {/* AI/Connection symbol */}
+                <circle cx="50" cy="50" r="20" fill="#4F46E5" fillOpacity="0.9" />
+                <path d="M42 50C42 45.582 45.582 42 50 42C54.418 42 58 45.582 58 50C58 54.418 54.418 58 50 58" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                <path d="M50 58C45.582 58 42 54.418 42 50" stroke="white" strokeWidth="3" strokeLinecap="round" strokeDasharray="0.1 6" />
+                
+                {/* Connecting lines between document and AI */}
+                <path d="M36 40L44 44" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" />
+                <path d="M36 32L46 42" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" />
+                <path d="M32 24L42 46" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" />
+              </svg>
             </div>
           </div>
           <h1 className="text-center text-4xl font-bold text-neutral-900 font-display tracking-tight">
