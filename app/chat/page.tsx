@@ -238,9 +238,9 @@ export default function Chat() {
       <header className="bg-white shadow-sm border-b border-neutral-200 px-4 py-3 sm:px-6">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center">
-            <div className="flex-shrink-0 w-9 h-9 mr-3">
+            <div className="flex-shrink-0 w-10 h-10 mr-3">
               <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg viewBox="0 0 24 24" className="h-6 w-6 text-white" fill="none" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                 </svg>
               </div>
@@ -257,7 +257,7 @@ export default function Chat() {
                     : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
                 }`}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 mr-1.5 transition-transform duration-300 ${sidebarOpen ? 'rotate-180' : 'rotate-0'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg viewBox="0 0 24 24" className={`h-4 w-4 mr-1.5 transition-transform duration-300 ${sidebarOpen ? 'rotate-180' : 'rotate-0'}`} fill="none" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
                 </svg>
                 <span className="hidden sm:inline">{sidebarOpen ? 'Hide Q&A' : 'Show Q&A'}</span>
@@ -292,9 +292,9 @@ export default function Chat() {
         {/* Q&A Sidebar */}
         {sidebarOpen && questionAnswers.length > 0 && (
           <div className="bg-white border-r border-neutral-200 flex-shrink-0 overflow-y-auto w-80 transition-all duration-300 ease-in-out">
-            <div className="p-4 border-b border-neutral-200 bg-neutral-50 sticky top-0 z-10">
+            <div className="p-4 border-b border-neutral-200 bg-gradient-to-r from-neutral-50 to-primary-50/20 sticky top-0 z-10">
               <h2 className="font-medium text-neutral-900 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg viewBox="0 0 24 24" className="h-5 w-5 mr-2 text-primary-500" fill="none" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 Document Q&A <span className="text-neutral-500 text-sm ml-1">({questionAnswers.length})</span>
@@ -342,7 +342,14 @@ export default function Chat() {
               <div className="space-y-6">
                 {messages.length === 0 ? (
                   <div className="text-center py-16 flex flex-col items-center">
-                    
+                    <div className="w-40 h-40 mb-6">
+                      <svg viewBox="0 0 200 200" className="w-full h-full" fill="none">
+                        <circle cx="100" cy="100" r="80" fill="#F0F9FF" />
+                        <path d="M70 100a30 30 0 1160 0 30 30 0 01-60 0z" fill="#DBEAFE" />
+                        <path d="M100 70v60" stroke="#60A5FA" strokeWidth="4" strokeLinecap="round" />
+                        <path d="M70 100h60" stroke="#60A5FA" strokeWidth="4" strokeLinecap="round" />
+                      </svg>
+                    </div>
                     <h3 className="text-xl font-medium text-neutral-900 mb-2 font-display">
                       Welcome to Document Chat
                     </h3>
@@ -351,9 +358,9 @@ export default function Chat() {
                     </p>
                     <button
                       onClick={() => setShowUploadInput(true)}
-                      className="mt-6 flex items-center px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors duration-200"
+                      className="mt-6 flex items-center px-4 py-2.5 bg-gradient-to-r from-primary-600 to-primary-500 text-white rounded-lg hover:from-primary-700 hover:to-primary-600 transition duration-200 shadow-md"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 mr-2" fill="none" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                       </svg>
                       Upload a Document
@@ -490,7 +497,7 @@ export default function Chat() {
                   className={`p-2 rounded-lg transition-all duration-200 ease-in-out ${showUploadInput ? 'bg-neutral-200 text-neutral-700' : 'bg-primary-100 text-primary-700'} hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500`}
                   title={showUploadInput ? "Hide upload" : "Upload document"}
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
                   </svg>
                 </button>
@@ -515,7 +522,7 @@ export default function Chat() {
                         : 'bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500'
                     }`}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
                   </button>
