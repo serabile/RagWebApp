@@ -230,31 +230,55 @@ export default function Chat() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-neutral-50 to-primary-50/30">
       {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-xl font-semibold text-gray-900">Document Chat</h1>
-          <div className="flex space-x-4">
+      <header className="bg-white shadow-sm border-b border-neutral-200 px-4 py-3 sm:px-6">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div className="flex items-center">
+            <div className="flex-shrink-0 w-9 h-9 mr-3">
+              <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+              </div>
+            </div>
+            <h1 className="text-xl font-medium text-neutral-900 font-display">Document Chat</h1>
+          </div>
+          <div className="flex items-center space-x-2">
             {questionAnswers.length > 0 && (
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="text-sm font-medium text-gray-600 hover:text-gray-500"
+                className={`text-sm px-3 py-1.5 rounded-lg transition-all duration-300 flex items-center ${
+                  sidebarOpen 
+                    ? 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+                    : 'bg-primary-50 text-primary-700 hover:bg-primary-100'
+                }`}
               >
-                {sidebarOpen ? 'Hide' : 'Show'} Q&A
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 mr-1.5 transition-transform duration-300 ${sidebarOpen ? 'rotate-180' : 'rotate-0'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                </svg>
+                <span className="hidden sm:inline">{sidebarOpen ? 'Hide Q&A' : 'Show Q&A'}</span>
+                <span className="sm:hidden">{sidebarOpen ? 'Hide' : 'Q&A'}</span>
               </button>
             )}
             <button
               onClick={handleClearHistory}
-              className="text-sm font-medium text-red-600 hover:text-red-500"
+              className="text-sm px-3 py-1.5 rounded-lg transition-all duration-200 bg-red-50 text-red-600 hover:bg-red-100 flex items-center"
             >
-              Clear History
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span className="hidden sm:inline">Clear History</span>
+              <span className="sm:hidden">Clear</span>
             </button>
             <Link
               href="/"
-              className="text-sm font-medium text-blue-600 hover:text-blue-500"
+              className="text-sm px-3 py-1.5 rounded-lg transition-all duration-200 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 flex items-center"
             >
-              Back to Home
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              <span className="hidden sm:inline">Home</span>
             </Link>
           </div>
         </div>
@@ -264,107 +288,138 @@ export default function Chat() {
       <div className="flex flex-1 overflow-hidden">
         {/* Q&A Sidebar */}
         {sidebarOpen && questionAnswers.length > 0 && (
-          <div className="bg-white w-80 border-r border-gray-200 flex-shrink-0 overflow-y-auto">
-            <div className="p-4 border-b border-gray-200">
-              <h2 className="font-medium text-gray-900">Document Q&A</h2>
+          <div className="bg-white border-r border-neutral-200 flex-shrink-0 overflow-y-auto w-80 transition-all duration-300 ease-in-out">
+            <div className="p-4 border-b border-neutral-200 bg-neutral-50 sticky top-0 z-10">
+              <h2 className="font-medium text-neutral-900 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Document Q&A <span className="text-neutral-500 text-sm ml-1">({questionAnswers.length})</span>
+              </h2>
             </div>
-            <ul className="divide-y divide-gray-200">
-              {questionAnswers.map((qa, index) => (
-                <li 
-                  key={index} 
-                  ref={el => { qaItemRefs.current[index] = el; }}
-                  className={`p-4 hover:bg-gray-50 transition duration-150 ${
-                    index === highlightedQA 
-                      ? 'bg-blue-50 border-l-4 border-blue-500' 
-                      : ''
-                  }`}
-                >
-                  <div className="mb-1 font-medium text-gray-900">
-                    {index === highlightedQA && (
-                      <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
-                    )}
-                    {qa.question}
-                  </div>
-                  <div className="text-sm text-gray-600">{qa.response}</div>
-                </li>
-              ))}
+            <ul className="divide-y divide-neutral-200">
+              {questionAnswers.map((qa, index) => {
+                const isHighlighted = index === highlightedQA;
+                
+                return (
+                  <li 
+                    key={index} 
+                    ref={el => { qaItemRefs.current[index] = el; }}
+                    className={`relative transition-all duration-300 ease-in-out
+                      ${isHighlighted 
+                        ? 'bg-primary-50 border-l-4 border-primary-500' 
+                        : 'hover:bg-neutral-50 border-l-4 border-transparent'
+                      }`}
+                  >
+                    <div className="p-4">
+                      <div className={`mb-2 font-medium ${isHighlighted ? 'text-primary-700' : 'text-neutral-800'}`}>
+                        <div className="flex items-start">
+                          {isHighlighted && (
+                            <span className="flex-shrink-0 inline-block w-2 h-2 rounded-full bg-primary-500 mt-1.5 mr-2"></span>
+                          )}
+                          <span className="leading-tight">{qa.question}</span>
+                        </div>
+                      </div>
+                      <div className="text-sm text-neutral-600 pl-4 border-l-2 border-neutral-200 leading-relaxed">
+                        {qa.response}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
         
         {/* Chat container */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Centered content wrapper */}
+        <div className="flex-1 flex flex-col overflow-hidden bg-neutral-50/50">
+          {/* Messages area */}
           <div className={`flex-1 overflow-y-auto ${(!sidebarOpen || questionAnswers.length === 0) ? 'max-w-3xl' : 'max-w-4xl'} w-full mx-auto`}>
-            {/* Messages area */}
             <div className="p-4 sm:p-6">
               <div className="space-y-6">
                 {messages.length === 0 ? (
-                  <div className="text-center py-10">
-                    <h3 className="text-lg font-medium text-gray-900">Welcome to Document Chat</h3>
-                    <p className="mt-1 text-gray-500">Ask questions about your uploaded documents</p>
+                  <div className="text-center py-16 flex flex-col items-center">
+                    <div className="w-28 h-28 mb-6">
+                      <lottie-player
+                        src="https://assets3.lottiefiles.com/packages/lf20_talnse2k.json"
+                        background="transparent"
+                        speed="1"
+                        loop
+                        autoplay
+                      ></lottie-player>
+                    </div>
+                    <h3 className="text-xl font-medium text-neutral-900 mb-2 font-display">Welcome to Document Chat</h3>
+                    <p className="text-neutral-600 max-w-md mx-auto">
+                      Upload your PDF documents using the button below and ask questions to get AI-powered insights from your content.
+                    </p>
+                    
+                    <button
+                      onClick={() => setShowUploadInput(true)}
+                      className="mt-6 flex items-center px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors duration-200"
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                      </svg>
+                      Upload a Document
+                    </button>
                   </div>
                 ) : (
-                  messages.map((message, index) => (
-                    <div
-                      key={index}
-                      className={`flex ${
-                        message.role === 'user' ? 'justify-end' : 'justify-start'
-                      }`}
-                    >
+                  <div className="space-y-6">
+                    {messages.map((message, index) => (
                       <div
-                        className={`max-w-lg rounded-lg px-4 py-2 ${
-                          message.role === 'user'
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-200 text-gray-800'
-                        }`}
+                        key={index}
+                        className={`flex ${
+                          message.role === 'user' ? 'justify-end' : 'justify-start'
+                        } animate-message-entrance`}
+                        style={{ animationDelay: `${index * 0.1}s` }}
                       >
-                        <p className="whitespace-pre-wrap">{message.content}</p>
-                        
-                        <div
-                          className={`flex items-center text-xs mt-1 ${
-                            message.role === 'user' ? 'text-blue-200' : 'text-gray-500'
-                          }`}
-                        >
-                          <span>{new Date(message.timestamp).toLocaleTimeString()}</span>
+                        <div className={`group relative max-w-lg ${message.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant'}`}>
+                          <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
                           
-                          {message.role === 'assistant' && message.metrics && (
-                            <div className="flex items-center ml-2">
-                              <span className="inline-block w-1 h-1 rounded-full bg-gray-400 mx-1"></span>
-                              <div className="flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span title={`Recherche: ${formatTime(message.metrics.similarity_database_search_sec)}, LLM: ${formatTime(message.metrics.llm_response_sec)}`}>
-                                  {formatTime(message.metrics.total_time_sec)}
-                                </span>
-                              </div>
-                              
-                              {message.source && (
-                                <div className="ml-2 flex items-center" title="Source">
-                                  <span className="inline-block w-1 h-1 rounded-full bg-gray-400 mx-1"></span>
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                          <div className={`flex items-center text-xs mt-2 opacity-70 group-hover:opacity-100 transition-opacity ${
+                            message.role === 'user' ? 'text-white/70' : 'text-neutral-400'
+                          }`}>
+                            <span>{new Date(message.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            
+                            {message.role === 'assistant' && message.metrics && (
+                              <div className="flex items-center ml-2">
+                                <span className="inline-block w-1 h-1 rounded-full bg-neutral-300 mx-1"></span>
+                                <div className="flex items-center tooltip" data-tip={`Search: ${formatTime(message.metrics.similarity_database_search_sec)}, Response: ${formatTime(message.metrics.llm_response_sec)}`}>
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                   </svg>
-                                  <span>{message.source}</span>
+                                  <span>{formatTime(message.metrics.total_time_sec)}</span>
                                 </div>
-                              )}
-                            </div>
-                          )}
+                                
+                                {message.source && (
+                                  <div className="ml-2 flex items-center tooltip" data-tip="Source document">
+                                    <span className="inline-block w-1 h-1 rounded-full bg-neutral-300 mx-1"></span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-secondary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <span className="truncate max-w-[100px]">{message.source}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
-                )}
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-gray-200 rounded-lg px-4 py-2 max-w-lg">
-                      <div className="flex space-x-2">
-                        <div className="h-2 w-2 bg-gray-500 rounded-full animate-bounce"></div>
-                        <div className="h-2 w-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        <div className="h-2 w-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                    ))}
+                    {isLoading && (
+                      <div className="flex justify-start animate-message-entrance">
+                        <div className="chat-bubble-loading">
+                          <div className="flex items-center space-x-3">
+                            <div className="typing-indicator">
+                              <span></span>
+                              <span></span>
+                              <span></span>
+                            </div>
+                            <div className="text-sm text-neutral-500">AI is thinking...</div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
                 <div ref={messagesEndRef} />
@@ -373,49 +428,62 @@ export default function Chat() {
           </div>
           
           {/* Input area */}
-          <div className="border-t border-gray-200">
+          <div className="border-t border-neutral-200 bg-white shadow-sm">
             <div className={`mx-auto ${(!sidebarOpen || questionAnswers.length === 0) ? 'max-w-3xl' : 'max-w-4xl'} w-full p-4`}>
               {/* Upload document UI */}
-              <div className={`mb-4 overflow-hidden transition-all duration-300 ease-in-out ${showUploadInput ? 'max-h-32' : 'max-h-0'}`}>
-                <div className="flex items-start space-x-2 mb-1">
-                  <input
-                    type="url"
-                    value={fileUrl}
-                    onChange={(e) => {
-                      setFileUrl(e.target.value);
-                      setUploadError(null);
-                    }}
-                    placeholder="Enter PDF URL (e.g. http://example.com/document.pdf)"
-                    className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                    disabled={isProcessing}
-                  />
-                  <button
-                    onClick={handleProcessDocument}
-                    disabled={isProcessing || !fileUrl.trim()}
-                    className={`px-3 py-2 rounded-md text-sm font-medium ${
-                      isProcessing || !fileUrl.trim()
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500'
-                    }`}
-                  >
-                    {isProcessing ? 'Processing...' : 'Process'}
-                  </button>
+              <div className={`mb-4 overflow-hidden transition-all duration-300 ease-in-out ${showUploadInput ? 'max-h-36 opacity-100' : 'max-h-0 opacity-0'}`}>
+                <div className="rounded-xl bg-primary-50 border border-primary-100 p-3">
+                  <div className="flex items-start space-x-2 mb-2">
+                    <input
+                      type="url"
+                      value={fileUrl}
+                      onChange={(e) => {
+                        setFileUrl(e.target.value);
+                        setUploadError(null);
+                      }}
+                      placeholder="Enter PDF URL (e.g. http://example.com/document.pdf)"
+                      className="flex-1 p-2 border border-neutral-300 rounded-md focus:ring-primary-500 focus:border-primary-500 text-sm shadow-sm"
+                      disabled={isProcessing}
+                    />
+                    <button
+                      onClick={handleProcessDocument}
+                      disabled={isProcessing || !fileUrl.trim()}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                        isProcessing || !fileUrl.trim()
+                          ? 'bg-neutral-300 text-neutral-500 cursor-not-allowed'
+                          : 'bg-primary-600 text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 shadow-sm hover:shadow'
+                      }`}
+                    >
+                      {isProcessing ? (
+                        <div className="flex items-center">
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Processing...
+                        </div>
+                      ) : 'Process'}
+                    </button>
+                  </div>
+                  
+                  {uploadError && (
+                    <div className="text-sm text-red-600 flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      {uploadError}
+                    </div>
+                  )}
+                  
+                  {uploadSuccess && (
+                    <div className="text-sm text-green-600 flex items-center animate-message-entrance">
+                      <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"></path>
+                      </svg>
+                      Document processed successfully!
+                    </div>
+                  )}
                 </div>
-                
-                {uploadError && (
-                  <div className="text-sm text-red-600 mt-1">
-                    {uploadError}
-                  </div>
-                )}
-                
-                {uploadSuccess && (
-                  <div className="text-sm text-green-600 mt-1 flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    Document processed successfully!
-                  </div>
-                )}
               </div>
               
               {/* Chat input form */}
@@ -423,7 +491,7 @@ export default function Chat() {
                 <button
                   type="button"
                   onClick={() => setShowUploadInput(!showUploadInput)}
-                  className="p-2 rounded-full text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`p-2 rounded-lg transition-all duration-200 ease-in-out ${showUploadInput ? 'bg-neutral-200 text-neutral-700' : 'bg-primary-100 text-primary-700'} hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500`}
                   title={showUploadInput ? "Hide upload" : "Upload document"}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -432,24 +500,28 @@ export default function Chat() {
                 </button>
                 
                 <form onSubmit={handleSubmit} className="flex flex-1 space-x-2">
-                  <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    disabled={isLoading || isProcessing}
-                    placeholder="Ask a question about your document..."
-                    className="flex-1 focus:ring-blue-500 focus:border-blue-500 block w-full rounded-md sm:text-sm border-gray-300 shadow-sm"
-                  />
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      disabled={isLoading || isProcessing}
+                      placeholder="Ask a question about your document..."
+                      className="block w-full pl-4 pr-12 py-3 border border-neutral-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 shadow-sm"
+                    />
+                  </div>
                   <button
                     type="submit"
                     disabled={isLoading || isProcessing || !input.trim()}
-                    className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+                    className={`inline-flex items-center px-4 py-2 rounded-lg shadow-sm text-white transition-all duration-200 ${
                       isLoading || isProcessing || !input.trim()
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                        ? 'bg-neutral-400 cursor-not-allowed'
+                        : 'bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500'
                     }`}
                   >
-                    Send
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
                   </button>
                 </form>
               </div>
