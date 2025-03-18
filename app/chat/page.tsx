@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { getAnswer } from '@/lib/api-client';
-import { saveMessages, loadMessages, clearMessages, loadQuestionAnswers } from '@/lib/storage';
+import { getAnswer, processDocument } from '@/lib/api-client';
+import { saveMessages, loadMessages, clearMessages, loadQuestionAnswers, saveQuestionAnswers } from '@/lib/storage';
 
 type Message = {
   role: 'user' | 'assistant';
@@ -24,6 +24,13 @@ export default function Chat() {
   const [questionAnswers, setQuestionAnswers] = useState<Array<{question: string; response: string}>>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // New states for file upload functionality
+  const [showUploadInput, setShowUploadInput] = useState(false);
+  const [fileUrl, setFileUrl] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   
   // Default system prompt
   const defaultPrompt = "Tu es un expert académique. Tu réponds aux questions selon le context fourni, et surtout ne sort pas du context.";
@@ -97,6 +104,62 @@ export default function Chat() {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Handle document processing
+  const handleProcessDocument = async () => {
+    if (!fileUrl.trim()) {
+      setUploadError('Please enter a PDF URL');
+      return;
+    }
+
+    // Validate if it looks like a PDF URL
+    if (!fileUrl.toLowerCase().endsWith('.pdf')) {
+      setUploadError('URL must point to a PDF file');
+      return;
+    }
+
+    setUploadError(null);
+    setIsProcessing(true);
+
+    try {
+      // Process the file with the RAG service
+      const result = await processDocument(fileUrl);
+      
+      // Store the questions and answers if available
+      if (result.content && result.content.questions) {
+        saveQuestionAnswers(result.content.questions);
+        setQuestionAnswers(result.content.questions);
+        setSidebarOpen(true); // Open sidebar to show the new Q&A
+      }
+      
+      if (result.processing_time && result.processing_time.doc_processing_response_info === 'Succeed') {
+        setUploadSuccess(true);
+        
+        // Reset the UI after a few seconds
+        setTimeout(() => {
+          setUploadSuccess(false);
+          setShowUploadInput(false);
+          setFileUrl('');
+        }, 3000);
+        
+        // Add a system message
+        const systemMessage: Message = {
+          role: 'assistant',
+          content: "✅ Document processed successfully! You can now ask questions about it.",
+          timestamp: new Date(),
+        };
+        
+        setMessages((prev) => [...prev, systemMessage]);
+      } else {
+        setUploadError('Failed to process the document');
+      }
+    } catch (err) {
+      setUploadError('An error occurred while processing your request');
+      console.error(err);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -245,27 +308,84 @@ export default function Chat() {
           {/* Input area - centered to match conversation */}
           <div className="border-t border-gray-200">
             <div className={`mx-auto ${(!sidebarOpen || questionAnswers.length === 0) ? 'max-w-3xl' : 'max-w-4xl'} w-full p-4`}>
-              <form onSubmit={handleSubmit} className="flex space-x-4">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  disabled={isLoading}
-                  placeholder="Ask a question about your document..."
-                  className="flex-1 focus:ring-blue-500 focus:border-blue-500 block w-full rounded-md sm:text-sm border-gray-300 shadow-sm"
-                />
+              {/* Upload document UI */}
+              <div className={`mb-4 overflow-hidden transition-all duration-300 ease-in-out ${showUploadInput ? 'max-h-32' : 'max-h-0'}`}>
+                <div className="flex items-start space-x-2 mb-1">
+                  <input
+                    type="url"
+                    value={fileUrl}
+                    onChange={(e) => {
+                      setFileUrl(e.target.value);
+                      setUploadError(null);
+                    }}
+                    placeholder="Enter PDF URL (e.g. http://example.com/document.pdf)"
+                    className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    disabled={isProcessing}
+                  />
+                  <button
+                    onClick={handleProcessDocument}
+                    disabled={isProcessing || !fileUrl.trim()}
+                    className={`px-3 py-2 rounded-md text-sm font-medium ${
+                      isProcessing || !fileUrl.trim()
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                    }`}
+                  >
+                    {isProcessing ? 'Processing...' : 'Process'}
+                  </button>
+                </div>
+                
+                {uploadError && (
+                  <div className="text-sm text-red-600 mt-1">
+                    {uploadError}
+                  </div>
+                )}
+                
+                {uploadSuccess && (
+                  <div className="text-sm text-green-600 mt-1 flex items-center">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Document processed successfully!
+                  </div>
+                )}
+              </div>
+              
+              {/* Chat input form */}
+              <div className="flex items-center space-x-2">
                 <button
-                  type="submit"
-                  disabled={isLoading || !input.trim()}
-                  className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
-                    isLoading || !input.trim()
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-                  }`}
+                  type="button"
+                  onClick={() => setShowUploadInput(!showUploadInput)}
+                  className="p-2 rounded-full text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  title={showUploadInput ? "Hide upload" : "Upload document"}
                 >
-                  Send
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                  </svg>
                 </button>
-              </form>
+                
+                <form onSubmit={handleSubmit} className="flex flex-1 space-x-2">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    disabled={isLoading || isProcessing}
+                    placeholder="Ask a question about your document..."
+                    className="flex-1 focus:ring-blue-500 focus:border-blue-500 block w-full rounded-md sm:text-sm border-gray-300 shadow-sm"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLoading || isProcessing || !input.trim()}
+                    className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+                      isLoading || isProcessing || !input.trim()
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+                    }`}
+                  >
+                    Send
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         </div>
