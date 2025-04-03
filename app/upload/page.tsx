@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { processDocument } from '@/lib/api-client';
-import { saveQuestionAnswers } from '@/lib/storage';
 
 export default function Upload() {
   const [fileUrl, setFileUrl] = useState<string>('');
@@ -38,10 +37,8 @@ export default function Upload() {
       // Process the file with the RAG service using the direct URL
       const result = await processDocument(fileUrl);
       
-      // Store the questions and answers if available
-      if (result.content && result.content.questions) {
-        saveQuestionAnswers(result.content.questions);
-      }
+      // We don't need to save questions locally as they'll be fetched from the API
+      // when needed in the chat interface using the conversation_id
       
       if (result.processing_time && result.processing_time.doc_processing_response_info === 'Succeed') {
         setSuccess(true);

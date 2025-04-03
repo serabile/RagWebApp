@@ -28,39 +28,66 @@ function getRagServiceUrl(request: NextRequest): string {
   return getDefaultApiUrl();
 }
 
+export async function GET(request: NextRequest) {
+  const apiUrl = getRagServiceUrl(request);
+  
+  try {
+    const response = await fetch(`${apiUrl}/conversations`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: `Failed to retrieve conversations: ${response.statusText}` },
+        { status: response.status }
+      );
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Error retrieving conversations:', error);
+    return NextResponse.json(
+      { error: 'Failed to retrieve conversations' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
+  const apiUrl = getRagServiceUrl(request);
+  
   try {
     const body = await request.json();
-    const serviceUrl = getRagServiceUrl(request);
-    
-    console.log(`Forwarding request to RAG service: ${serviceUrl}/answer`);
-    console.log('Request body:', body);
-    
-    // Forward the request to the RAG service using the configured endpoint
-    const response = await fetch(`${serviceUrl}/answer`, {
+    const { name, description } = body;
+
+    const response = await fetch(`${apiUrl}/conversations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        name,
+        description: description || '',
+      }),
     });
-    
+
     if (!response.ok) {
-      console.error(`RAG service error: ${response.status} ${response.statusText}`);
       return NextResponse.json(
-        { error: `Answer failed: ${response.status} ${response.statusText}` },
+        { error: `Failed to create conversation: ${response.statusText}` },
         { status: response.status }
       );
     }
-    
+
     const data = await response.json();
-    console.log('RAG service response:', data);
-    
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error getting answer:', error);
+    console.error('Error creating conversation:', error);
     return NextResponse.json(
-      { error: 'Failed to get answer', message: error instanceof Error ? error.message : String(error) },
+      { error: 'Failed to create conversation' },
       { status: 500 }
     );
   }

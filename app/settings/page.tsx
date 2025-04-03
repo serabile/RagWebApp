@@ -9,6 +9,13 @@ export default function Settings() {
   const { settings, updateSettings } = useSettings();
   const [apiEndpoint, setApiEndpoint] = useState(settings.apiEndpoint);
   const [isSaved, setIsSaved] = useState(false);
+  
+  // Database management states
+  const [clearingDatabase, setClearingDatabase] = useState(false);
+  const [showClearConfirmation, setShowClearConfirmation] = useState(false);
+  const [clearDatabaseSuccess, setClearDatabaseSuccess] = useState(false);
+  const [clearDatabaseError, setClearDatabaseError] = useState<string | null>(null);
+  const [executionTime, setExecutionTime] = useState<number | null>(null);
 
   useEffect(() => {
     // Reset apiEndpoint if settings change from elsewhere
@@ -29,10 +36,39 @@ export default function Settings() {
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
   };
+  
+  const handleClearDatabase = async () => {
+    setClearingDatabase(true);
+    setClearDatabaseSuccess(false);
+    setClearDatabaseError(null);
+    
+    try {
+      const { clearDatabase } = await import('@/lib/api-client');
+      const result = await clearDatabase();
+      
+      if (result.status === 'success') {
+        setClearDatabaseSuccess(true);
+        setExecutionTime(result.execution_time_sec || null);
+        setShowClearConfirmation(false);
+        
+        // Auto-dismiss success message after 5 seconds
+        setTimeout(() => {
+          setClearDatabaseSuccess(false);
+          setExecutionTime(null);
+        }, 5000);
+      } else {
+        setClearDatabaseError(result.message || 'Unknown error occurred');
+      }
+    } catch (error: any) {
+      setClearDatabaseError(error.message || 'Failed to clear database');
+    } finally {
+      setClearingDatabase(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-neutral-50 to-primary-50/30">
-      {/* Enhanced header with better icon */}
+      {/* Header */}
       <header className="bg-white shadow-sm border-b border-neutral-200 px-4 py-3 sm:px-6">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center">
@@ -63,7 +99,7 @@ export default function Settings() {
 
       <div className="flex-1 overflow-auto px-4 py-6 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
-          {/* Enhanced API Configuration card with detailed illustration */}
+          {/* API Configuration card */}
           <div className="bg-white shadow-soft rounded-xl border border-neutral-100 overflow-hidden transition-cards hover-scale">
             <div className="px-6 py-5 border-b border-neutral-200 bg-gradient-to-r from-neutral-50 to-primary-50/20">
               <h2 className="text-lg font-medium text-neutral-900 flex items-center">
@@ -160,7 +196,140 @@ export default function Settings() {
             </form>
           </div>
           
-          {/* Enhanced About section with better illustration */}
+          {/* Database Management section */}
+          <div className="mt-8 bg-white shadow-soft rounded-xl border border-neutral-100 overflow-hidden transition-cards hover-scale">
+            <div className="px-6 py-5 border-b border-neutral-200 bg-gradient-to-r from-neutral-50 to-red-50/20">
+              <h2 className="text-lg font-medium text-neutral-900 flex items-center">
+                <svg className="h-6 w-6 mr-2 text-red-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20.25 6.375C20.25 8.653 16.556 10.5 12 10.5C7.444 10.5 3.75 8.653 3.75 6.375M20.25 6.375C20.25 4.097 16.556 2.25 12 2.25C7.444 2.25 3.75 4.097 3.75 6.375M20.25 6.375V17.625C20.25 19.903 16.556 21.75 12 21.75C7.444 21.75 3.75 19.903 3.75 17.625V6.375M20.25 12C20.25 14.278 16.556 16.125 12 16.125C7.444 16.125 3.75 14.278 3.75 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Database Management
+              </h2>
+            </div>
+            <div className="p-6">
+              <div className="mb-6 flex items-start">
+                <div className="flex-shrink-0 bg-red-100 rounded-full p-1 mr-4">
+                  <svg className="h-6 w-6 text-red-600" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-neutral-900">Clear RAG Database</h3>
+                  <p className="mt-2 text-sm text-neutral-600">
+                    This action will completely clear the database, removing all stored documents and their vector representations. 
+                    This operation cannot be undone.
+                  </p>
+                  
+                  {!showClearConfirmation ? (
+                    <button 
+                      onClick={() => setShowClearConfirmation(true)}
+                      className="mt-4 inline-flex items-center px-3 py-2 border border-red-300 text-sm leading-4 font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    >
+                      <svg className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M8.33333 5H11.6667V6.66667H8.33333V5Z" fill="currentColor"/>
+                        <path d="M3.33333 6.66667H5V15C5 15.442 5.17559 15.866 5.48816 16.1785C5.80072 16.4911 6.22464 16.6667 6.66667 16.6667H13.3333C13.7754 16.6667 14.1993 16.4911 14.5118 16.1785C14.8244 15.866 15 15.442 15 15V6.66667H16.6667V5H13.3333V3.33333C13.3333 2.89131 13.1577 2.46738 12.8452 2.15482C12.5326 1.84226 12.1087 1.66667 11.6667 1.66667H8.33333C7.89131 1.66667 7.46738 1.84226 7.15482 2.15482C6.84226 2.46738 6.66667 2.89131 6.66667 3.33333V5H3.33333V6.66667ZM7.5 8.33333H9.16667V13.3333H7.5V8.33333ZM10.8333 8.33333H12.5V13.3333H10.8333V8.33333ZM8.33333 3.33333H11.6667V5H8.33333V3.33333Z" fill="currentColor"/>
+                      </svg>
+                      Clear Database
+                    </button>
+                  ) : (
+                    <div className="mt-4 p-4 border border-red-200 bg-red-50 rounded-md">
+                      <p className="text-sm font-medium text-red-800">Are you sure you want to clear the entire database?</p>
+                      <p className="mt-1 text-xs text-red-700">This action cannot be undone.</p>
+                      <div className="mt-3 flex items-center space-x-3">
+                        <button
+                          onClick={handleClearDatabase}
+                          disabled={clearingDatabase}
+                          className="inline-flex items-center px-3 py-2 border border-red-300 text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        >
+                          {clearingDatabase ? (
+                            <>
+                              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Processing...
+                            </>
+                          ) : (
+                            <>Confirm Clear</>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => setShowClearConfirmation(false)}
+                          disabled={clearingDatabase}
+                          className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {clearDatabaseSuccess && (
+                    <div className="mt-4 p-4 border border-green-200 bg-green-50 rounded-md animate-fade-in">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-green-800">
+                            Database successfully cleared!
+                          </p>
+                          {executionTime && (
+                            <p className="mt-1 text-xs text-green-700">
+                              Execution time: {executionTime.toFixed(2)}s
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {clearDatabaseError && (
+                    <div className="mt-4 p-4 border border-red-200 bg-red-50 rounded-md animate-fade-in">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-red-800">
+                            Error: {clearDatabaseError}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="mt-2 text-sm">
+                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-yellow-700">
+                        <strong>Use with caution:</strong> Clearing the database will remove all vector embeddings and document references. This operation is primarily intended for:
+                      </p>
+                      <ul className="mt-2 list-disc list-inside text-xs text-yellow-700 space-y-1">
+                        <li>Resetting the environment for testing</li>
+                        <li>Clearing out old data before loading new documents</li>
+                        <li>Maintenance and cleanup operations</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* About This App section */}
           <div className="mt-8 bg-white shadow-soft rounded-xl border border-neutral-100 overflow-hidden transition-cards hover-scale">
             <div className="px-6 py-5 border-b border-neutral-200 bg-gradient-to-r from-neutral-50 to-primary-50/20">
               <h2 className="text-lg font-medium text-neutral-900 flex items-center">
@@ -172,6 +341,7 @@ export default function Settings() {
                 About This App
               </h2>
             </div>
+            
             <div className="p-6">
               <div className="flex flex-col md:flex-row items-start gap-6">
                 <div className="flex-shrink-0 w-24 h-24 mx-auto md:mx-0">

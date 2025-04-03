@@ -69,17 +69,24 @@ A Next.js application that allows users to upload documents and ask questions ab
 ```
 /RagWebApp
 ├── app/                  # Next.js app directory
-│   ├── api/             # API routes
-│   ├── chat/            # Chat interface page
-│   ├── upload/          # File upload page
+│   ├── api/             # API routes for backend functionality
+│   ├── chat/            # Chat interface page for Q&A interactions
+│   ├── settings/        # Application settings page
+│   ├── upload/          # File upload page for document processing
 │   └── page.tsx         # Home page
-├── components/          # React components
+├── contexts/            # React contexts for state management
 ├── lib/                 # Utility functions, hooks, and services
+│   ├── api-client.ts    # API client for backend communication
+│   ├── error-utils.ts   # Error handling utilities
+│   ├── storage.ts       # Local storage management
+│   └── env.ts           # Environment configuration
 ├── public/              # Static assets
 └── types/               # TypeScript type definitions
 ```
 
 ## Deployment
+
+### Vercel Deployment
 
 This application can be easily deployed on Vercel:
 
@@ -88,9 +95,30 @@ npm run build
 npm run start
 ```
 
-For production deployment, use the Vercel platform or your preferred hosting service.
+### Docker Deployment
+
+The application can also be deployed using Docker:
+
+1. Build the Docker image:
+   ```bash
+   docker build -t rag-web-app .
+   ```
+
+2. Run the container:
+   ```bash
+   docker run -p 3000:3000 rag-web-app
+   ```
+
+3. Access the application at [http://localhost:3000](http://localhost:3000)
+
+## TypeScript Support
+
+This project is fully typed with TypeScript, providing:
+
+- Type-safe API client for backend communication
+- Proper error handling with typed responses
+- Strong typing for all React components and contexts
 
 ## License
 
 [MIT](LICENSE)
-```

@@ -28,39 +28,36 @@ function getRagServiceUrl(request: NextRequest): string {
   return getDefaultApiUrl();
 }
 
-export async function POST(request: NextRequest) {
+export async function DELETE(request: NextRequest) {
+  const apiUrl = getRagServiceUrl(request);
+  
   try {
-    const body = await request.json();
-    const serviceUrl = getRagServiceUrl(request);
-    
-    console.log(`Forwarding request to RAG service: ${serviceUrl}/answer`);
-    console.log('Request body:', body);
-    
-    // Forward the request to the RAG service using the configured endpoint
-    const response = await fetch(`${serviceUrl}/answer`, {
-      method: 'POST',
+    const response = await fetch(`${apiUrl}/database`, {
+      method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
     });
-    
+
     if (!response.ok) {
-      console.error(`RAG service error: ${response.status} ${response.statusText}`);
       return NextResponse.json(
-        { error: `Answer failed: ${response.status} ${response.statusText}` },
+        { 
+          status: 'error',
+          message: `Failed to clear database: ${response.statusText}` 
+        },
         { status: response.status }
       );
     }
-    
+
     const data = await response.json();
-    console.log('RAG service response:', data);
-    
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error getting answer:', error);
+    console.error('Error clearing database:', error);
     return NextResponse.json(
-      { error: 'Failed to get answer', message: error instanceof Error ? error.message : String(error) },
+      { 
+        status: 'error',
+        message: 'Failed to clear database' 
+      },
       { status: 500 }
     );
   }

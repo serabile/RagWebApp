@@ -28,39 +28,47 @@ function getRagServiceUrl(request: NextRequest): string {
   return getDefaultApiUrl();
 }
 
-export async function POST(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { conversationId: string } }
+) {
+  const apiUrl = getRagServiceUrl(request);
+  const { conversationId } = params;
+  
   try {
-    const body = await request.json();
-    const serviceUrl = getRagServiceUrl(request);
-    
-    console.log(`Forwarding request to RAG service: ${serviceUrl}/answer`);
-    console.log('Request body:', body);
-    
-    // Forward the request to the RAG service using the configured endpoint
-    const response = await fetch(`${serviceUrl}/answer`, {
-      method: 'POST',
+    const response = await fetch(`${apiUrl}/conversations/${conversationId}/qa`, {
+      method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
     });
+
+    // Get the response data
+    const data = await response.json();
     
+    // Check if there's an error or the response is not as expected
     if (!response.ok) {
-      console.error(`RAG service error: ${response.status} ${response.statusText}`);
       return NextResponse.json(
-        { error: `Answer failed: ${response.status} ${response.statusText}` },
+        {
+          status: "error",
+          conversation_id: conversationId,
+          qa_pairs: [],
+          message: data.message || `Failed to fetch Q/A pairs: ${response.statusText}`
+        },
         { status: response.status }
       );
     }
-    
-    const data = await response.json();
-    console.log('RAG service response:', data);
-    
+
+    // Return the response from the backend
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error getting answer:', error);
+    console.error('Error fetching conversation Q/A pairs:', error);
     return NextResponse.json(
-      { error: 'Failed to get answer', message: error instanceof Error ? error.message : String(error) },
+      { 
+        status: "error",
+        qa_pairs: [],
+        message: "Failed to fetch Q/A pairs"
+      },
       { status: 500 }
     );
   }

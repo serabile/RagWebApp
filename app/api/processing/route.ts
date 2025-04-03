@@ -3,7 +3,15 @@ import { getDefaultApiUrl } from '@/lib/env';
 
 // Helper function to get API endpoint from cookie or use default
 function getRagServiceUrl(request: NextRequest): string {
-  // Try to get from cookies first
+  // Récupérer l'API endpoint depuis les headers de la requête
+  // Le client enverra son API endpoint stocké dans localStorage via un header personnalisé
+  const apiEndpointHeader = request.headers.get('x-rag-api-endpoint');
+  
+  if (apiEndpointHeader) {
+    return apiEndpointHeader;
+  }
+  
+  // Si pas de header, essayer de lire le cookie (pour compatibilité)
   const settings = request.cookies.get('rag-app-settings')?.value;
   
   if (settings) {

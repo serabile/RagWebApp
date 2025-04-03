@@ -3,8 +3,16 @@
 import { useState, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { getAnswer, processDocument } from '@/lib/api-client';
-import { saveMessages, loadMessages, clearMessages, loadQuestionAnswers, saveQuestionAnswers } from '@/lib/storage';
+import { getAnswer, processDocument, createConversation, listConversations, 
+  deleteConversation, Conversation, getConversationQA, QuestionAnswerPair 
+} from '@/lib/api-client';
+import { 
+  saveMessages, loadMessages, clearMessages, 
+  getCurrentConversation, setCurrentConversation,
+  saveConversation, loadConversations as loadLocalConversations,
+  deleteConversation as deleteLocalConversation,
+  type StoredConversation
+} from '@/lib/storage';
 
 const Lottie = dynamic(() => import('react-lottie-player'), { ssr: false });
 
@@ -25,10 +33,21 @@ export default function Chat() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [questionAnswers, setQuestionAnswers] = useState<Array<{question: string; response: string}>>([]);
+  const [qaLoading, setQaLoading] = useState(false);
+  const [qaError, setQaError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [highlightedQA, setHighlightedQA] = useState<number | null>(null);
   const qaItemRefs = useRef<(HTMLLIElement | null)[]>([]);
+  
+  // Conversation states
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [showConversationModal, setShowConversationModal] = useState(false);
+  const [newConversationName, setNewConversationName] = useState('');
+  const [newConversationDesc, setNewConversationDesc] = useState('');
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+  const [conversationsLoading, setConversationsLoading] = useState(false);
   
   // File upload states
   const [showUploadInput, setShowUploadInput] = useState(false);
@@ -36,39 +55,80 @@ export default function Chat() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [useExistingConversation, setUseExistingConversation] = useState(true);
+  const [newFileConversationName, setNewFileConversationName] = useState('');
   
   // Default system prompt
   const defaultPrompt = "Tu es un expert académique. Tu réponds aux questions selon le context fourni, et surtout ne sort pas du context.";
   
+  // Fetch conversations on component mount
   useEffect(() => {
-    // Load messages from local storage on component mount
-    const savedMessages = loadMessages();
-    if (savedMessages.length > 0) {
-      setMessages(savedMessages);
-    }
+    fetchConversations();
     
-    // Load question answers
-    const savedQAs = loadQuestionAnswers();
-    if (savedQAs.length > 0) {
-      setQuestionAnswers(savedQAs);
+    // Load current conversation ID
+    const savedConversationId = getCurrentConversation();
+    if (savedConversationId) {
+      setCurrentConversationId(savedConversationId);
+      // Load messages for this conversation will happen in another effect
     }
   }, []);
+  
+  // Load appropriate messages when current conversation changes
+  useEffect(() => {
+    if (currentConversationId) {
+      // Load messages for the current conversation
+      const conversation = loadLocalConversations().find(c => c.id === currentConversationId);
+      if (conversation && conversation.messages) {
+        setMessages(conversation.messages);
+      } else {
+        setMessages([]);
+      }
+      
+      // Load Q/A pairs for this conversation from API
+      fetchConversationQA(currentConversationId);
+    } else {
+      // Load general messages if no conversation is selected
+      const savedMessages = loadMessages();
+      if (savedMessages.length > 0) {
+        setMessages(savedMessages);
+      }
+      
+      // Clear Q/A pairs when no conversation is selected
+      setQuestionAnswers([]);
+    }
+    
+    // Save the current conversation ID
+    setCurrentConversation(currentConversationId);
+  }, [currentConversationId]);
   
   // Find matching Q/A when messages change
   useEffect(() => {
     if (messages.length > 0 && questionAnswers.length > 0) {
       findMatchingQA();
     }
-  }, [messages, questionAnswers]);
+    
+    // Save messages to the appropriate storage based on conversation context
+    if (messages.length > 0) {
+      if (currentConversationId) {
+        // Save to the current conversation
+        const storedConversation: StoredConversation = {
+          id: currentConversationId,
+          name: conversations.find(c => c.id === currentConversationId)?.name || 'Conversation',
+          description: conversations.find(c => c.id === currentConversationId)?.description || '',
+          created_at: new Date().toISOString(),
+          messages: messages
+        };
+        saveConversation(storedConversation);
+      } else {
+        // Save to general storage
+        saveMessages(messages);
+      }
+    }
+  }, [messages, questionAnswers, currentConversationId, conversations]);
   
   useEffect(() => {
     // Scroll to bottom whenever messages change
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    
-    // Save to local storage whenever messages change
-    if (messages.length > 0) {
-      saveMessages(messages);
-    }
   }, [messages]);
 
   // Scroll to highlighted Q/A
@@ -88,9 +148,111 @@ export default function Chat() {
     qaItemRefs.current = new Array(questionAnswers.length).fill(null);
   }, [questionAnswers.length]);
 
+  // Fetch conversations from API
+  const fetchConversations = async () => {
+    try {
+      setConversationsLoading(true);
+      const response = await listConversations();
+      // Handle the new response format which has a "conversations" array
+      setConversations(response.conversations || []);
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+    } finally {
+      setConversationsLoading(false);
+    }
+  };
+
+  // Create a new conversation
+  const [createConversationError, setCreateConversationError] = useState<string | null>(null);
+  
+  const handleCreateConversation = async () => {
+    if (!newConversationName.trim()) return;
+    
+    try {
+      setCreateConversationError(null);
+      setIsCreatingConversation(true);
+      
+      console.log('Creating conversation with name:', newConversationName);
+      
+      const response = await createConversation(newConversationName, newConversationDesc);
+      console.log('Conversation created successfully:', response);
+      
+      // Map the response to our Conversation type format
+      const newConversation: Conversation = {
+        id: response.conversation_id,
+        name: response.name || `Conversation ${response.conversation_id.substring(0, 8)}`,
+        description: response.description || '',
+        created_at: new Date(response.created_at).getTime(),
+      };
+      
+      // Update conversations list
+      setConversations((prev) => [...prev, newConversation]);
+      
+      // Switch to the new conversation
+      setCurrentConversationId(response.conversation_id);
+      
+      // Clear form and close modal
+      setNewConversationName('');
+      setNewConversationDesc('');
+      setShowConversationModal(false);
+      
+      // Clear messages for the new conversation
+      setMessages([]);
+      
+    } catch (error: any) {
+      console.error('Error creating conversation:', error);
+      
+      // Extract the most useful error message
+      let errorMessage = 'Failed to create conversation';
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.originalError && error.originalError.message) {
+        errorMessage = error.originalError.message;
+      }
+      
+      setCreateConversationError(errorMessage);
+      
+      // Keep modal open so user can see the error
+    } finally {
+      setIsCreatingConversation(false);
+    }
+  };
+
+  // Handle conversation change
+  const handleConversationChange = (conversationId: string | null) => {
+    setCurrentConversationId(conversationId);
+  };
+
+  // Handle delete conversation
+  const handleDeleteConversation = async (id: string) => {
+    try {
+      await deleteConversation(id);
+      
+      // Remove from local state
+      setConversations((prev) => prev.filter((c) => c.id !== id));
+      
+      // Remove from local storage
+      deleteLocalConversation(id);
+      
+      // If current conversation was deleted, reset
+      if (currentConversationId === id) {
+        setCurrentConversationId(null);
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+    }
+  };
+
   const handleClearHistory = () => {
-    clearMessages();
-    setMessages([]);
+    if (currentConversationId) {
+      // Just clear messages for this conversation
+      setMessages([]);
+    } else {
+      // Clear general messages
+      clearMessages();
+      setMessages([]);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -109,7 +271,8 @@ export default function Chat() {
     setIsLoading(true);
     
     try {
-      const data = await getAnswer(input, defaultPrompt);
+      // Pass conversation ID if we have one
+      const data = await getAnswer(input, defaultPrompt, currentConversationId || undefined);
       
       const assistantMessage = {
         role: 'assistant' as const,
@@ -135,7 +298,45 @@ export default function Chat() {
     }
   };
 
-  // Handle document processing
+  // Fetch Q/A pairs from the API
+  const fetchConversationQA = async (conversationId: string) => {
+    try {
+      setQaLoading(true);
+      setQaError(null);
+      
+      const response = await getConversationQA(conversationId);
+      
+      if (response.status === 'success') {
+        if (response.qa_pairs && response.qa_pairs.length > 0) {
+          // Map the API response format (question/answer) to our component's format (question/response)
+          const formattedQA = response.qa_pairs.map(qa => ({
+            question: qa.question,
+            response: qa.answer
+          }));
+          
+          setQuestionAnswers(formattedQA);
+          // Open sidebar if we have Q/A pairs
+          setSidebarOpen(true);
+        } else {
+          setQuestionAnswers([]);
+          if (response.message) {
+            setQaError(response.message);
+          }
+        }
+      } else if (response.status === 'error') {
+        setQuestionAnswers([]);
+        setQaError(response.message || 'Failed to load Q/A pairs');
+      }
+    } catch (error) {
+      console.error('Error fetching conversation Q/A:', error);
+      setQaError('Failed to load document Q/A pairs');
+      setQuestionAnswers([]);
+    } finally {
+      setQaLoading(false);
+    }
+  };
+  
+  // Handle document processing with conversation support
   const handleProcessDocument = async () => {
     if (!fileUrl.trim()) {
       setUploadError('Please enter a PDF URL');
@@ -151,32 +352,123 @@ export default function Chat() {
     setIsProcessing(true);
 
     try {
-      const result = await processDocument(fileUrl);
-      
-      if (result.content && result.content.questions) {
-        saveQuestionAnswers(result.content.questions);
-        setQuestionAnswers(result.content.questions);
-        setSidebarOpen(true);
-      }
-      
-      if (result.processing_time && result.processing_time.doc_processing_response_info === 'Succeed') {
-        setUploadSuccess(true);
+      // If we have a current conversation ID, always use it regardless of radio selection
+      // This is the key change to ensure we use existing conversations
+      if (currentConversationId) {
+        console.log(`Using existing conversation: ${currentConversationId}`);
         
-        setTimeout(() => {
-          setUploadSuccess(false);
-          setShowUploadInput(false);
-          setFileUrl('');
-        }, 3000);
+        // Force the useExistingConversation to true to maintain UI consistency
+        if (!useExistingConversation) {
+          setUseExistingConversation(true);
+        }
         
-        const systemMessage: Message = {
-          role: 'assistant',
-          content: "✅ Document processed successfully! You can now ask questions about it.",
-          timestamp: new Date(),
-        };
+        const result = await processDocument(
+          fileUrl,
+          currentConversationId,
+          undefined // No need for conversation name when using existing ID
+        );
         
-        setMessages((prev) => [...prev, systemMessage]);
+        // Always fetch Q/A pairs with the current conversation ID
+        if (result.processing_time && result.processing_time.doc_processing_response_info === 'Succeed') {
+          fetchConversationQA(currentConversationId);
+          
+          setUploadSuccess(true);
+          
+          setTimeout(() => {
+            setUploadSuccess(false);
+            setShowUploadInput(false);
+            setFileUrl('');
+          }, 3000);
+          
+          const systemMessage: Message = {
+            role: 'assistant',
+            content: "✅ Document processed successfully! You can now ask questions about it.",
+            timestamp: new Date(),
+          };
+          
+          setMessages((prev) => [...prev, systemMessage]);
+        } else {
+          setUploadError('Failed to process the document');
+        }
       } else {
-        setUploadError('Failed to process the document');
+        // No existing conversation ID, proceed with normal flow
+        let conversationName = undefined;
+        
+        if (!useExistingConversation && newFileConversationName.trim()) {
+          // User wants to create a named conversation
+          conversationName = newFileConversationName.trim();
+          console.log(`Creating new named conversation: ${conversationName}`);
+        } else {
+          // Using classic mode with default conversation
+          console.log('Using classic mode with default conversation');
+        }
+        
+        const result = await processDocument(
+          fileUrl,
+          undefined,
+          !useExistingConversation ? conversationName : undefined
+        );
+        
+        // After successful processing, if a conversation was created, load the Q/A pairs
+        if (result.conversation_id) {
+          setCurrentConversationId(result.conversation_id);
+          
+          // Always fetch Q/A pairs from the API after document processing
+          fetchConversationQA(result.conversation_id);
+          
+          // Create a formatted name for auto-created conversations if none provided
+          if (!conversationName) {
+            // Format a readable name from the conversation ID - first 8 chars
+            const formattedId = result.conversation_id.substring(0, 8);
+            const timestamp = new Date().toLocaleDateString();
+            const autoName = `Conversation ${formattedId}... (${timestamp})`;
+            
+            // Add this conversation to our list with the formatted name
+            const newConversation: Conversation = {
+              id: result.conversation_id,
+              name: autoName,
+              created_at: new Date().getTime(),
+              document_count: 1
+            };
+            
+            setConversations(prev => [...prev, newConversation]);
+            
+            // Also save this to local storage
+            const storedConversation: StoredConversation = {
+              id: result.conversation_id,
+              name: autoName,
+              created_at: new Date().toISOString(),
+              messages: [] // Empty messages as this is new
+            };
+            saveConversation(storedConversation);
+            
+            console.log(`Auto-created conversation named: ${autoName}`);
+          } else {
+            // Refresh conversations list to include the new one
+            fetchConversations();
+          }
+        }
+        
+        if (result.processing_time && result.processing_time.doc_processing_response_info === 'Succeed') {
+          setUploadSuccess(true);
+          
+          setTimeout(() => {
+            setUploadSuccess(false);
+            setShowUploadInput(false);
+            setFileUrl('');
+            setNewFileConversationName('');
+          }, 3000);
+          
+          const systemMessage: Message = {
+            role: 'assistant',
+            content: "✅ Document processed successfully! You can now ask questions about it.",
+            timestamp: new Date(),
+          };
+          
+          setMessages((prev) => [...prev, systemMessage]);
+        } else {
+          setUploadError('Failed to process the document');
+        }
       }
     } catch (err) {
       setUploadError('An error occurred while processing your request');
@@ -246,7 +538,52 @@ export default function Chat() {
               </div>
             </div>
             <h1 className="text-xl font-medium text-neutral-900 font-display">Document Chat</h1>
+            
+            {/* Conversation selector */}
+            <div className="ml-4">
+              <div className="relative inline-block">
+                <button
+                  onClick={() => setShowConversationModal(true)}
+                  className="text-sm px-3 py-1.5 rounded-lg transition-all duration-200 bg-primary-100 text-primary-700 hover:bg-primary-200 flex items-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <span>New Conversation</span>
+                </button>
+              </div>
+                
+              <div className="relative inline-block ml-2">
+                <select
+                  value={currentConversationId || ''}
+                  onChange={(e) => handleConversationChange(e.target.value || null)}
+                  className="text-sm px-3 py-1.5 rounded-lg transition-all duration-200 border border-neutral-300 bg-neutral-50 text-neutral-700 hover:bg-neutral-100 appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-primary-500 min-w-[180px]"
+                >
+                  <option value="">Choose a conversation...</option>
+                  {conversations.length === 0 && conversationsLoading ? (
+                    <option disabled>Loading conversations...</option>
+                  ) : conversations.length === 0 ? (
+                    <option disabled>No conversations available</option>
+                  ) : (
+                    conversations.map((conversation) => (
+                      <option key={conversation.id} value={conversation.id} className="py-1">
+                        {conversation.name || 'Unnamed conversation'} 
+                        {conversation.document_count !== undefined && 
+                          ` (${conversation.document_count} document${conversation.document_count !== 1 ? 's' : ''})`
+                        }
+                      </option>
+                    ))
+                  )}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                  <svg className="h-4 w-4 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
           </div>
+          
           <div className="flex items-center space-x-2">
             {questionAnswers.length > 0 && (
               <button
@@ -288,6 +625,78 @@ export default function Chat() {
       </header>
       
       {/* Main content with sidebar and chat */}
+      
+      {/* New Conversation Modal */}
+      {showConversationModal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-scale-in">
+            <div className="px-6 py-4 bg-gradient-to-r from-neutral-50 to-primary-50/20 border-b border-neutral-200">
+              <h3 className="text-lg font-medium text-neutral-900">Create New Conversation</h3>
+            </div>
+            <div className="p-6">
+              <div className="mb-4">
+                <label htmlFor="conv-name" className="block text-sm font-medium text-neutral-700 mb-1">
+                  Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="conv-name"
+                  value={newConversationName}
+                  onChange={(e) => setNewConversationName(e.target.value)}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm"
+                  placeholder="e.g., French History"
+                  required
+                />
+              </div>
+              <div className="mb-6">
+                <label htmlFor="conv-desc" className="block text-sm font-medium text-neutral-700 mb-1">
+                  Description (optional)
+                </label>
+                <input
+                  type="text"
+                  id="conv-desc"
+                  value={newConversationDesc}
+                  onChange={(e) => setNewConversationDesc(e.target.value)}
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 text-sm"
+                  placeholder="e.g., Documents about French historical events"
+                />
+              </div>
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowConversationModal(false)}
+                  className="px-4 py-2 border border-neutral-300 rounded-md text-neutral-700 bg-white hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!newConversationName.trim() || isCreatingConversation}
+                  onClick={handleCreateConversation}
+                  className={`px-4 py-2 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 ${
+                    !newConversationName.trim() || isCreatingConversation
+                      ? 'bg-neutral-400 cursor-not-allowed'
+                      : 'bg-primary-600 hover:bg-primary-700'
+                  }`}
+                >
+                  {isCreatingConversation ? (
+                    <div className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Creating...
+                    </div>
+                  ) : (
+                    'Create Conversation'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="flex flex-1 overflow-hidden">
         {/* Q&A Sidebar */}
         {sidebarOpen && questionAnswers.length > 0 && (
@@ -434,7 +843,7 @@ export default function Chat() {
           <div className="border-t border-neutral-200 bg-white shadow-sm">
             <div className={`mx-auto ${(!sidebarOpen || questionAnswers.length === 0) ? 'max-w-3xl' : 'max-w-4xl'} w-full p-4`}>
               {/* Upload document UI */}
-              <div className={`mb-4 overflow-hidden transition-all duration-300 ease-in-out ${showUploadInput ? 'max-h-36 opacity-100' : 'max-h-0 opacity-0'}`}>
+              <div className={`mb-4 overflow-hidden transition-all duration-300 ease-in-out ${showUploadInput ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
                 <div className="rounded-xl bg-primary-50 border border-primary-100 p-3">
                   <div className="flex items-start space-x-2 mb-2">
                     <input
@@ -467,6 +876,54 @@ export default function Chat() {
                         </div>
                       ) : 'Process'}
                     </button>
+                  </div>
+                  
+                  {/* Conversation options */}
+                  <div className="mt-3 bg-white rounded-lg border border-neutral-200 p-2.5 mb-2">
+                    <div className="text-xs font-medium text-neutral-500 mb-2">Conversation Settings</div>
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center">
+                        <input
+                          id="use-existing"
+                          type="radio"
+                          checked={useExistingConversation}
+                          onChange={() => setUseExistingConversation(true)}
+                          name="conversation-option"
+                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-neutral-300"
+                          disabled={isProcessing}
+                        />
+                        <label htmlFor="use-existing" className="ml-2 text-sm text-neutral-700">
+                          {currentConversationId ? 'Use current conversation' : 'Create default conversation'}
+                        </label>
+                      </div>
+                      <div className="flex items-center">
+                        <input
+                          id="create-new"
+                          type="radio"
+                          checked={!useExistingConversation}
+                          onChange={() => setUseExistingConversation(false)}
+                          name="conversation-option"
+                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-neutral-300"
+                          disabled={isProcessing}
+                        />
+                        <label htmlFor="create-new" className="ml-2 text-sm text-neutral-700">
+                          Create new conversation
+                        </label>
+                      </div>
+                    </div>
+                    
+                    {!useExistingConversation && (
+                      <div className="mt-2">
+                        <input
+                          type="text"
+                          placeholder="New conversation name"
+                          value={newFileConversationName}
+                          onChange={(e) => setNewFileConversationName(e.target.value)}
+                          className="w-full p-2 border border-neutral-300 rounded-md focus:ring-primary-500 focus:border-primary-500 text-sm shadow-sm"
+                          disabled={isProcessing}
+                        />
+                      </div>
+                    )}
                   </div>
                   
                   {uploadError && (
